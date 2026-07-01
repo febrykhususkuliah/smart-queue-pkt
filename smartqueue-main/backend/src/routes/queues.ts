@@ -20,6 +20,64 @@ const generateQueueNumber = async (): Promise<string> => {
   return `Q-${date}-${String(count).padStart(4, '0')}`;
 };
 
+// ==========================================
+// NEW: GET GLOBAL ACTIVE QUEUES (LIVE MONITOR)
+// Semua pelanggan yang sudah login bisa melihat proyek aktif di bengkel dengan data tersensor
+// ==========================================
+router.get('/global', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const connection = await pool.getConnection();
+    
+    // Query dengan proteksi privasi menggunakan MySQL string manipulation
+    // Nama pelanggan: Diambil 2 huruf depan + '**' (Febry -> Fe**)
+    // Plat Nomor: Menyembunyikan 3 karakter terakhir (H 1234 ABC -> H 1234 ***)
+    const query = `
+      SELECT 
+        sq.id,
+        sq.queue_number,
+        sq.complaint,
+        sq.service_date,
+        sq.status,
+        v.merk,
+        v.tipe,
+        CONCAT(LEFT(u.name, 2), REPEAT('*', GREATEST(0, CHAR_LENGTH(u.name) - 2))) as user_name,
+        CASE 
+          WHEN CHAR_LENGTH(v.plat_nomor) > 4 
+          THEN CONCAT(LEFT(v.plat_nomor, CHAR_LENGTH(v.plat_nomor) - 3), '***')
+          ELSE '***'
+        END as plat_nomor
+      FROM service_queues sq
+      LEFT JOIN vehicles v ON sq.vehicle_id = v.id
+      LEFT JOIN users u ON sq.user_id = u.id
+      WHERE sq.status IN ('Menunggu', 'Diproses')
+      ORDER BY 
+        CASE sq.status 
+          WHEN 'Diproses' THEN 1 
+          WHEN 'Menunggu' THEN 2 
+          ELSE 3 
+        END,
+        sq.created_at ASC
+    `;
+
+    const [queues] = await connection.query(query);
+    connection.release();
+
+    res.json({
+      success: true,
+      message: 'Global active queues retrieved',
+      code: 200,
+      data: queues,
+    });
+  } catch (error) {
+    console.error('Get global queues error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve global paddock monitor data',
+      code: 500,
+    });
+  }
+});
+
 // Get queues (user sees only own, admin sees all)
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
@@ -236,7 +294,7 @@ router.put(
           success: false,
           message: 'Invalid status',
           code: 400,
-        });
+          });
       }
 
       const connection = await pool.getConnection();

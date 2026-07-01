@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { StatisticCard } from '@/components/statistic-card';
 import { EmptyState } from '@/components/empty-state';
 import { toast } from 'sonner';
-import { Car, AlertCircle, CheckCircle, Zap, Printer, Clock } from 'lucide-react';
+import { Car, AlertCircle, CheckCircle, Zap, Printer, Clock, Activity } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getAuthToken, getStoredSession } from '@/lib/auth';
@@ -14,10 +14,10 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000';
 
 // Fungsi pembantu untuk membaca tipe pengerjaan & menentukan estimasi waktu secara dinamis
 const getServiceDetails = (complaintText: string) => {
-  const match = complaintText.match(/^\[(.*?)\]/);
+  const match = complaintText?.match(/^\[(.*?)\]/);
   const type = match ? match[1] : 'Servis Umum';
   // Bersihkan teks keluhan asli dari tag [Kategori]
-  const cleanComplaint = complaintText.replace(/^\[.*?\]\s*/, '');
+  const cleanComplaint = complaintText?.replace(/^\[.*?\]\s*/, '') || '-';
 
   let estimation = '~45 Menit';
   if (type === 'Tune Up') estimation = '~2-3 Jam';
@@ -34,6 +34,9 @@ export default function UserDashboardPage() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [queues, setQueues] = useState<ServiceQueue[]>([]);
+  
+  // STATE: Untuk menampung data antrean bengkel secara global
+  const [globalQueues, setGlobalQueues] = useState<any[]>([]);
 
   useEffect(() => {
     const stored = getStoredSession();
@@ -52,11 +55,14 @@ export default function UserDashboardPage() {
           return;
         }
 
-        const [vehicleResponse, queueResponse] = await Promise.all([
+        const [vehicleResponse, queueResponse, globalQueueResponse] = await Promise.all([
           fetch(`${API_BASE_URL}/api/vehicles`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
           fetch(`${API_BASE_URL}/api/queues`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${API_BASE_URL}/api/queues/global`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -67,6 +73,7 @@ export default function UserDashboardPage() {
 
         const vehicleResult = await vehicleResponse.json();
         const queueResult = await queueResponse.json();
+        const globalQueueResult = globalQueueResponse.ok ? await globalQueueResponse.json() : { data: [] };
 
         setVehicles(
           (vehicleResult.data || []).map((vehicle: any) => ({
@@ -97,6 +104,9 @@ export default function UserDashboardPage() {
             user_name: queue.user_name || '',
           }))
         );
+
+        setGlobalQueues(globalQueueResult.data || []);
+
       } catch (error) {
         console.error('Fetch dashboard data error:', error);
         toast.error('Gagal memuat data dashboard. Silakan login kembali.');
@@ -218,6 +228,7 @@ export default function UserDashboardPage() {
         <p className="mt-2 text-muted-foreground">Selamat datang kembali di paddock, {user.name}!</p>
       </div>
 
+      {/* STATISTIK */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         <StatisticCard
           title="Total Motor di Garasi"
@@ -239,6 +250,7 @@ export default function UserDashboardPage() {
         />
       </div>
 
+      {/* KENDARAAN SAYA */}
       <div className="rounded-3xl border border-border bg-card p-6">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-xl font-bold text-foreground">Motor Saya</h2>
@@ -282,10 +294,11 @@ export default function UserDashboardPage() {
         )}
       </div>
 
+      {/* STATUS ANTREAN PRIBADI */}
       <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-foreground">Status Pengerjaan Mesin</h2>
+            <h2 className="text-xl font-bold text-foreground">Status Pengerjaan Mesin Anda</h2>
             <p className="mt-1 text-sm text-muted-foreground">Pantau durasi modifikasi dan unduh nota antrean digital Anda</p>
           </div>
           <Link
@@ -319,7 +332,6 @@ export default function UserDashboardPage() {
               </thead>
               <tbody>
                 {userQueues.map((queue) => {
-                  // Ekstrak detail keluhan rahasia secara real-time untuk baris tabel ini
                   const { type, cleanComplaint, estimation } = getServiceDetails(queue.complaint);
 
                   return (
@@ -351,7 +363,6 @@ export default function UserDashboardPage() {
                             {queue.status}
                           </span>
                           
-                          {/* ESTIMASI DURASI WORKSHOP DINAMIS */}
                           {(queue.status === 'Menunggu' || queue.status === 'pending' || queue.status === 'Diproses') && (
                             <div className="flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
                               <Clock className="h-3 w-3" />
@@ -379,6 +390,83 @@ export default function UserDashboardPage() {
         )}
       </div>
 
+      {/* LIVE PADDOCK MONITOR (GLOBAL QUEUE) DENGAN ESTIMASI */}
+      <div className="rounded-3xl border-2 border-primary/20 bg-primary/5 p-6 shadow-sm overflow-hidden relative">
+        <div className="absolute top-0 right-0 p-4 opacity-10">
+           <Activity className="w-32 h-32 text-primary" />
+        </div>
+        
+        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              </span>
+              <h2 className="text-xl font-bold text-foreground">Live Paddock Monitor</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">Pantau kepadatan garasi. Menampilkan proyek motor yang sedang aktif (Identitas disensor).</p>
+          </div>
+          <div className="bg-background border border-border px-4 py-2 rounded-xl text-sm font-semibold">
+            Total Proyek Aktif: <span className="text-primary">{globalQueues.length} Unit</span>
+          </div>
+        </div>
+
+        {globalQueues.length === 0 ? (
+          <div className="text-center py-8 bg-background/50 rounded-xl border border-border relative z-10">
+            <p className="text-muted-foreground font-medium">Garasi sedang sepi, tidak ada motor yang sedang dikerjakan.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-border bg-background relative z-10">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/40">
+                  <th className="px-4 py-3 font-semibold text-foreground">No. Antrean</th>
+                  <th className="px-4 py-3 font-semibold text-foreground">Pelanggan</th>
+                  <th className="px-4 py-3 font-semibold text-foreground">Unit Motor</th>
+                  <th className="px-4 py-3 font-semibold text-foreground">Jenis Layanan</th>
+                  <th className="px-4 py-3 font-semibold text-foreground">Estimasi Waktu</th>
+                  <th className="px-4 py-3 font-semibold text-foreground text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {globalQueues.map((gq, index) => {
+                  const { type, estimation } = getServiceDetails(gq.complaint);
+                  return (
+                    <tr key={index} className="border-b border-border hover:bg-muted/20 transition-colors">
+                      <td className="px-4 py-3 font-bold text-foreground">{gq.queue_number}</td>
+                      <td className="px-4 py-3 text-muted-foreground font-medium">{gq.user_name}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {gq.merk} {gq.tipe} <span className="text-xs bg-muted px-1.5 py-0.5 rounded ml-1 font-mono">{gq.plat_nomor}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                         <span className="inline-block px-2 py-0.5 rounded-md text-[11px] font-bold bg-primary/10 text-primary border border-primary/20">
+                          {type}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+                          <Clock className="h-3 w-3" />
+                          <span>{estimation}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                            gq.status === 'Diproses' ? 'bg-primary/20 text-primary animate-pulse' : 'bg-warning/20 text-warning'
+                          }`}>
+                            {gq.status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* QUICK LINKS */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Link
           href="/queue/create"
