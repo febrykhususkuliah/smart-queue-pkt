@@ -10,21 +10,14 @@ import { Bell, Lock, Eye, EyeOff, LogOut, Trash2 } from 'lucide-react';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { User } from '@/lib/types';
 
+// SKEMA DIUBAH: Email dan SMS notifications telah dihapus
 const notificationSchema = z.object({
-  emailNotifications: z.boolean(),
-  smsNotifications: z.boolean(),
   queueUpdates: z.boolean(),
   maintenanceReminders: z.boolean(),
   systemUpdates: z.boolean(),
 });
 
-const twoFactorSchema = z.object({
-  enable2FA: z.boolean(),
-  backupCodes: z.boolean(),
-});
-
 type NotificationSettings = z.infer<typeof notificationSchema>;
-type TwoFactorSettings = z.infer<typeof twoFactorSchema>;
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -49,13 +42,10 @@ export default function SettingsPage() {
 
   const {
     register: registerNotifications,
-    watch: watchNotifications,
     handleSubmit: handleNotificationsSubmit,
   } = useForm<NotificationSettings>({
     resolver: zodResolver(notificationSchema),
     defaultValues: {
-      emailNotifications: true,
-      smsNotifications: false,
       queueUpdates: true,
       maintenanceReminders: true,
       systemUpdates: true,
@@ -70,8 +60,6 @@ export default function SettingsPage() {
   } = useForm<PasswordFormData>({
     resolver: zodResolver(passwordSchema),
   });
-
-  const notificationSettings = watchNotifications();
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -131,96 +119,71 @@ export default function SettingsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8 max-w-3xl mx-auto">
+      {/* mx-auto dipastikan terpasang agar rata tengah */}
+      <div className="space-y-8 max-w-2xl mx-auto">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-foreground">Pengaturan</h1>
-          <p className="mt-2 text-sm text-foreground/60">
+          <p className="mt-2 text-sm text-muted-foreground">
             Kelola preferensi dan keamanan akun Anda
           </p>
         </div>
 
         {/* Notification Settings */}
-        <div className="card-base">
+        <div className="card-base p-6 rounded-3xl border border-border bg-card">
           <div className="flex items-center gap-3 mb-6">
             <Bell className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold text-foreground">Notifikasi</h2>
+            <h2 className="text-lg font-semibold text-foreground">Notifikasi Dalam Aplikasi</h2>
           </div>
 
           <form onSubmit={handleNotificationsSubmit(onNotificationsSubmit)} className="space-y-4">
-            {/* Email Notifications */}
-            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-              <div>
-                <h3 className="font-medium text-foreground">Email Notifications</h3>
-                <p className="text-sm text-foreground/60">Terima notifikasi melalui email</p>
-              </div>
-              <input
-                type="checkbox"
-                {...registerNotifications('emailNotifications')}
-                className="w-5 h-5 rounded border-border cursor-pointer"
-              />
-            </div>
-
-            {/* SMS Notifications */}
-            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-              <div>
-                <h3 className="font-medium text-foreground">SMS Notifications</h3>
-                <p className="text-sm text-foreground/60">Terima notifikasi melalui SMS</p>
-              </div>
-              <input
-                type="checkbox"
-                {...registerNotifications('smsNotifications')}
-                className="w-5 h-5 rounded border-border cursor-pointer"
-              />
-            </div>
-
             {/* Queue Updates */}
-            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-muted rounded-2xl border border-border">
               <div>
                 <h3 className="font-medium text-foreground">Update Antrian</h3>
-                <p className="text-sm text-foreground/60">Notifikasi update status antrian</p>
+                <p className="text-xs text-muted-foreground">Notifikasi pembaruan status pengerjaan mesin secara langsung</p>
               </div>
               <input
                 type="checkbox"
                 {...registerNotifications('queueUpdates')}
-                className="w-5 h-5 rounded border-border cursor-pointer"
+                className="w-5 h-5 rounded border-border cursor-pointer accent-primary"
               />
             </div>
 
             {/* Maintenance Reminders */}
-            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-muted rounded-2xl border border-border">
               <div>
-                <h3 className="font-medium text-foreground">Pengingat Maintenance</h3>
-                <p className="text-sm text-foreground/60">Ingatkan jadwal maintenance kendaraan</p>
+                <h3 className="font-medium text-foreground">Pengingat Setup Ulang</h3>
+                <p className="text-xs text-muted-foreground">Ingatkan jadwal cek berkala pasca modifikasi/bore up</p>
               </div>
               <input
                 type="checkbox"
                 {...registerNotifications('maintenanceReminders')}
-                className="w-5 h-5 rounded border-border cursor-pointer"
+                className="w-5 h-5 rounded border-border cursor-pointer accent-primary"
               />
             </div>
 
             {/* System Updates */}
-            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-muted rounded-2xl border border-border">
               <div>
-                <h3 className="font-medium text-foreground">Update Sistem</h3>
-                <p className="text-sm text-foreground/60">Informasi update sistem dan fitur baru</p>
+                <h3 className="font-medium text-foreground">Update Workshop</h3>
+                <p className="text-xs text-muted-foreground">Informasi fitur baru web dan promo paket modifikasi bengkel</p>
               </div>
               <input
                 type="checkbox"
                 {...registerNotifications('systemUpdates')}
-                className="w-5 h-5 rounded border-border cursor-pointer"
+                className="w-5 h-5 rounded border-border cursor-pointer accent-primary"
               />
             </div>
 
-            <button type="submit" className="btn-primary w-full">
-              Simpan Pengaturan Notifikasi
+            <button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2.5 rounded-xl transition-colors mt-2">
+              Simpan Pengaturan
             </button>
           </form>
         </div>
 
         {/* Security Settings */}
-        <div className="card-base">
+        <div className="card-base p-6 rounded-3xl border border-border bg-card">
           <div className="flex items-center gap-3 mb-6">
             <Lock className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold text-foreground">Keamanan</h2>
@@ -229,10 +192,10 @@ export default function SettingsPage() {
           {!showPasswordForm ? (
             <button
               onClick={() => setShowPasswordForm(true)}
-              className="w-full p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors text-left"
+              className="w-full p-4 bg-muted rounded-2xl hover:bg-muted/80 transition-colors text-left border border-border"
             >
               <h3 className="font-medium text-foreground">Ubah Password</h3>
-              <p className="text-sm text-foreground/60">Perbarui password akun Anda</p>
+              <p className="text-xs text-muted-foreground">Perbarui kata sandi akun keamanan Anda</p>
             </button>
           ) : (
             <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="space-y-4">
@@ -246,7 +209,7 @@ export default function SettingsPage() {
                     type={showCurrentPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     {...registerPassword('currentPassword')}
-                    className="input-field"
+                    className="w-full rounded-xl border border-border bg-background px-4 py-2 text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                   />
                   <button
                     type="button"
@@ -261,7 +224,7 @@ export default function SettingsPage() {
                   </button>
                 </div>
                 {passwordErrors.currentPassword && (
-                  <p className="mt-1 text-sm text-red-600">{passwordErrors.currentPassword.message}</p>
+                  <p className="mt-1 text-xs text-destructive">{passwordErrors.currentPassword.message}</p>
                 )}
               </div>
 
@@ -275,7 +238,7 @@ export default function SettingsPage() {
                     type={showNewPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     {...registerPassword('newPassword')}
-                    className="input-field"
+                    className="w-full rounded-xl border border-border bg-background px-4 py-2 text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                   />
                   <button
                     type="button"
@@ -290,40 +253,38 @@ export default function SettingsPage() {
                   </button>
                 </div>
                 {passwordErrors.newPassword && (
-                  <p className="mt-1 text-sm text-red-600">{passwordErrors.newPassword.message}</p>
+                  <p className="mt-1 text-xs text-destructive">{passwordErrors.newPassword.message}</p>
                 )}
               </div>
 
               {/* Confirm Password */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Konfirmasi Password
+                  Konfirmasi Password Baru
                 </label>
-                <div className="relative">
-                  <input
-                    type="password"
-                    placeholder="••••••••"
-                    {...registerPassword('confirmPassword')}
-                    className="input-field"
-                  />
-                </div>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  {...registerPassword('confirmPassword')}
+                  className="w-full rounded-xl border border-border bg-background px-4 py-2 text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                />
                 {passwordErrors.confirmPassword && (
-                  <p className="mt-1 text-sm text-red-600">{passwordErrors.confirmPassword.message}</p>
+                  <p className="mt-1 text-xs text-destructive">{passwordErrors.confirmPassword.message}</p>
                 )}
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowPasswordForm(false)}
-                  className="btn-ghost flex-1"
+                  className="flex-1 rounded-xl border border-border py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isPasswordSubmitting}
-                  className="btn-primary flex-1"
+                  className="flex-1 rounded-xl bg-primary text-primary-foreground py-2 text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
                 >
                   {isPasswordSubmitting ? 'Menyimpan...' : 'Ubah Password'}
                 </button>
@@ -333,55 +294,55 @@ export default function SettingsPage() {
         </div>
 
         {/* Session & Account */}
-        <div className="card-base">
+        <div className="card-base p-6 rounded-3xl border border-border bg-card">
           <h2 className="text-lg font-semibold text-foreground mb-6">Sesi & Akun</h2>
 
           <div className="space-y-3">
             <button
               onClick={handleLogout}
-              className="w-full p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors text-left flex items-center justify-between group"
+              className="w-full p-4 bg-muted rounded-2xl hover:bg-muted/80 transition-colors text-left flex items-center justify-between group border border-border"
             >
               <div>
                 <h3 className="font-medium text-foreground">Logout</h3>
-                <p className="text-sm text-foreground/60">Keluar dari akun</p>
+                <p className="text-xs text-muted-foreground">Keluar dengan aman dari sistem paddock</p>
               </div>
               <LogOut className="h-5 w-5 text-foreground/40 group-hover:text-foreground/60" />
             </button>
 
             <button
               onClick={handleDeleteAccount}
-              className="w-full p-4 bg-red-50 hover:bg-red-100 rounded-lg transition-colors text-left flex items-center justify-between group border border-red-200"
+              className="w-full p-4 bg-red-500/10 hover:bg-red-500/20 rounded-2xl transition-colors text-left flex items-center justify-between group border border-red-500/20"
             >
               <div>
-                <h3 className="font-medium text-red-900">Hapus Akun</h3>
-                <p className="text-sm text-red-700">Tindakan ini tidak dapat dibatalkan</p>
+                <h3 className="font-medium text-red-600 dark:text-red-400">Hapus Akun</h3>
+                <p className="text-xs text-red-500/70 dark:text-red-400/70">Menghapus data garasi dan booking secara permanen</p>
               </div>
-              <Trash2 className="h-5 w-5 text-red-600 group-hover:text-red-700" />
+              <Trash2 className="h-5 w-5 text-red-500 group-hover:text-red-600" />
             </button>
           </div>
         </div>
 
         {/* App Information */}
-        <div className="card-base">
-          <h2 className="text-lg font-semibold text-foreground mb-6">Informasi Aplikasi</h2>
+        <div className="card-base p-6 rounded-3xl border border-border bg-card">
+          <h2 className="text-lg font-semibold text-foreground mb-6">Informasi Sistem</h2>
 
           <div className="space-y-4 text-sm">
-            <div className="flex justify-between items-center py-3 border-b border-border">
-              <span className="text-foreground/60">Versi Aplikasi</span>
-              <span className="font-medium text-foreground">v1.0.0</span>
+            <div className="flex justify-between items-center py-2 border-b border-border">
+              <span className="text-muted-foreground">Versi Aplikasi</span>
+              <span className="font-medium text-foreground">v1.0.0-pkt-racing</span>
             </div>
-            <div className="flex justify-between items-center py-3 border-b border-border">
-              <span className="text-foreground/60">Versi API</span>
-              <span className="font-medium text-foreground">v1</span>
+            <div className="flex justify-between items-center py-2 border-b border-border">
+              <span className="text-muted-foreground">Koneksi Core API</span>
+              <span className="font-medium text-foreground text-success">Connected v1</span>
             </div>
-            <div className="flex justify-between items-center py-3">
-              <span className="text-foreground/60">Last Updated</span>
+            <div className="flex justify-between items-center py-2">
+              <span className="text-muted-foreground">Sinkronisasi Terakhir</span>
               <span className="font-medium text-foreground">
-                {new Date().toLocaleDateString('id-ID')}
+                {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
               </span>
             </div>
           </div>
-        </div>
+        </div>44
       </div>
     </DashboardLayout>
   );

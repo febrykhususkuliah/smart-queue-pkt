@@ -1,78 +1,47 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { Eye, EyeOff, Moon, Sun } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Moon, Sun } from 'lucide-react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000';
 
-const registerSchema = z
-  .object({
-    fullName: z.string().min(3, 'Nama minimal 3 karakter'),
-    email: z.string().email('Email tidak valid'),
-    password: z.string().min(8, 'Password minimal 8 karakter'),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'Password tidak cocok',
-    path: ['confirmPassword'],
-  });
+// Skema Validasi Form Daftar (Sudah lengkap dengan Phone)
+const registerSchema = z.object({
+  name: z.string().min(3, 'Nama minimal 3 karakter'),
+  email: z.string().email('Email tidak valid'),
+  phone: z.string().min(9, 'Nomor telepon minimal 9 angka'),
+  password: z.string().min(6, 'Password minimal 6 karakter'),
+  confirmPassword: z.string()
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Password tidak cocok",
+  path: ["confirmPassword"],
+});
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isDark, setIsDark] = useState(false);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<RegisterFormData>({
+  
+  const { register, handleSubmit, formState: { errors } } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
 
-  const onSubmit = async (data: RegisterFormData) => {
-    setIsLoading(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: data.fullName,
-          email: data.email,
-          password: data.password,
-          confirmPassword: data.confirmPassword,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        toast.error(result?.message || 'Pendaftaran gagal. Silakan coba lagi.');
-        return;
-      }
-
-      toast.success('Pendaftaran berhasil! Silakan login.');
-      setTimeout(() => {
-        router.push('/login');
-      }, 500);
-    } catch (error) {
-      console.error('Register error:', error);
-      toast.error('Pendaftaran gagal. Silakan coba lagi.');
-    } finally {
-      setIsLoading(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsDark(document.documentElement.classList.contains('dark'));
     }
-  };
+  }, []);
 
   const toggleTheme = () => {
     const newIsDark = !isDark;
@@ -88,130 +57,126 @@ export default function RegisterPage() {
     }
   };
 
+  const onSubmit = async (data: RegisterFormData) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name: data.name, 
+          email: data.email, 
+          phone: data.phone, 
+          password: data.password,
+          confirmPassword: data.confirmPassword
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        toast.error(result?.message || 'Gagal mendaftar. Silakan coba lagi.');
+        return;
+      }
+
+      toast.success('Pendaftaran berhasil! Pasukan baru siap bertugas.');
+      setTimeout(() => { router.push('/login'); }, 1000);
+    } catch (error) {
+      toast.error('Terjadi kesalahan. Silakan coba lagi.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 transition-colors duration-300">
-      {/* Theme Toggle */}
+    <div 
+      className="flex min-h-screen items-center justify-center px-4 py-12 transition-colors duration-300 relative overflow-hidden"
+      style={{
+        backgroundImage: "url('/wallpaper-login.png')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed'
+      }}
+    >
+      {/* Tombol Tema (Dark/Light Mode) */}
       <button
         onClick={toggleTheme}
-        className="absolute top-6 right-6 relative inline-flex h-8 w-14 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary/50"
-        style={{
-          backgroundColor: isDark ? '#334155' : '#E2E8F0',
-        }}
+        className="absolute top-6 right-6 inline-flex h-8 w-14 items-center rounded-full bg-muted border border-border p-1 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary/50 z-20 shadow-md"
       >
-        <span
-          className="absolute h-7 w-7 rounded-full shadow-sm transition-transform duration-300 flex items-center justify-center"
-          style={{
-            backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
-            transform: isDark ? 'translateX(26px)' : 'translateX(2px)',
-          }}
-        >
-          {isDark ? (
-            <Moon className="h-4 w-4 text-blue-400" />
-          ) : (
-            <Sun className="h-4 w-4 text-yellow-500" />
-          )}
+        <span className={`h-6 w-6 rounded-full bg-card shadow-sm transition-transform duration-300 flex items-center justify-center ${isDark ? 'translate-x-6' : 'translate-x-0'}`}>
+          {isDark ? <Moon className="h-3 w-3 text-primary" /> : <Sun className="h-3 w-3 text-yellow-500" />}
         </span>
       </button>
 
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 h-20 w-20 sm:h-24 sm:w-24 rounded-3xl bg-muted p-3 shadow-sm">
-            <Image src="/logo.svg" alt="Hasuno Workshop Smart Queue" width={96} height={96} className="object-contain" />
+      {/* Kontainer Utama */}
+      <div className="w-full max-w-md relative z-10">
+        
+        {/* Logo PKT */}
+        <div className="mb-6 flex flex-col items-center justify-center">
+          <div className="relative w-80 h-32 sm:w-96 sm:h-36 mb-2 transition-transform hover:scale-105 duration-300">
+            <Image 
+              src="/logo-pkt.png" 
+              alt="Bengkel PKT Logo" 
+              fill
+              className="object-contain drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)]" 
+              priority
+            />
           </div>
-          <h1 className="text-3xl font-bold text-foreground">Hasuno Workshop</h1>
-          <p className="mt-2 text-foreground/60">Smart Queue untuk bengkel Anda</p>
         </div>
 
-        {/* Register Card */}
-        <div className="rounded-2xl border border-border bg-card p-8 shadow-lg transition-all duration-300">
-          <h2 className="text-2xl font-bold text-foreground">Daftar</h2>
-          <p className="mt-2 text-sm text-foreground/60">
-            Buat akun baru untuk menggunakan SMART QUEUE
-          </p>
+        {/* Kartu Form Register */}
+        <div className="relative rounded-2xl border border-border/40 bg-card/95 backdrop-blur-xl p-8 shadow-[0_0_60px_rgba(0,0,0,0.7)] transition-all duration-300">
+          <h2 className="text-2xl font-bold text-foreground">Gabung Pasukan PKT</h2>
+          <p className="mt-2 text-sm text-muted-foreground">Lengkapi data di bawah untuk membuat akun baru</p>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
-            {/* Full Name */}
+          <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Nama Lengkap
-              </label>
-              <input
-                type="text"
-                placeholder="Budi Santoso"
-                {...register('fullName')}
-                className="w-full rounded-lg border border-border bg-background text-foreground px-4 py-2.5 placeholder:text-foreground/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-              />
-              {errors.fullName && (
-                <p className="mt-1 text-sm text-red-600">{errors.fullName.message}</p>
-              )}
+              <label className="block text-sm font-bold text-foreground mb-2">Nama Lengkap</label>
+              <input type="text" placeholder="Misal: Budi Santoso" {...register('name')} className="w-full rounded-lg border border-border bg-background/70 text-foreground px-4 py-3 placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 font-medium" />
+              {errors.name && <p className="mt-1.5 text-sm font-medium text-destructive">{errors.name.message}</p>}
             </div>
 
-            {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Email</label>
-              <input
-                type="email"
-                placeholder="nama@example.com"
-                {...register('email')}
-                className="w-full rounded-lg border border-border bg-background text-foreground px-4 py-2.5 placeholder:text-foreground/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-              />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-              )}
+              <label className="block text-sm font-bold text-foreground mb-2">Email Pengguna</label>
+              <input type="email" placeholder="nama@email.com" {...register('email')} className="w-full rounded-lg border border-border bg-background/70 text-foreground px-4 py-3 placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 font-medium" />
+              {errors.email && <p className="mt-1.5 text-sm font-medium text-destructive">{errors.email.message}</p>}
             </div>
 
-            {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Password</label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                {...register('password')}
-                className="w-full rounded-lg border border-border bg-background text-foreground px-4 py-2.5 placeholder:text-foreground/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-              />
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-              )}
+              <label className="block text-sm font-bold text-foreground mb-2">Nomor Telepon / WA</label>
+              <input type="tel" placeholder="08123456789" {...register('phone')} className="w-full rounded-lg border border-border bg-background/70 text-foreground px-4 py-3 placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 font-medium" />
+              {errors.phone && <p className="mt-1.5 text-sm font-medium text-destructive">{errors.phone.message}</p>}
             </div>
 
-            {/* Confirm Password */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Konfirmasi Password
-              </label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                {...register('confirmPassword')}
-                className="w-full rounded-lg border border-border bg-background text-foreground px-4 py-2.5 placeholder:text-foreground/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-              />
-              {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.confirmPassword.message}
-                </p>
-              )}
+              <label className="block text-sm font-bold text-foreground mb-2">Kata Sandi</label>
+              <div className="relative">
+                <input type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...register('password')} className="w-full rounded-lg border border-border bg-background/70 text-foreground px-4 py-3 placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 pr-12 font-medium" />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-primary transition-colors">
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+              {errors.password && <p className="mt-1.5 text-sm font-medium text-destructive">{errors.password.message}</p>}
             </div>
 
-            {/* Register Button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="mt-6 w-full rounded-lg bg-primary text-primary-foreground py-2.5 font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Memproses...' : 'Daftar'}
+            <div>
+              <label className="block text-sm font-bold text-foreground mb-2">Konfirmasi Kata Sandi</label>
+              <div className="relative">
+                <input type={showConfirmPassword ? 'text' : 'password'} placeholder="••••••••" {...register('confirmPassword')} className="w-full rounded-lg border border-border bg-background/70 text-foreground px-4 py-3 placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 pr-12 font-medium" />
+                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-primary transition-colors">
+                  {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+              {errors.confirmPassword && <p className="mt-1.5 text-sm font-medium text-destructive">{errors.confirmPassword.message}</p>}
+            </div>
+
+            <button type="submit" disabled={isLoading} className="mt-8 w-full rounded-lg bg-primary text-primary-foreground py-3.5 font-bold text-lg hover:bg-primary/90 transition-all disabled:opacity-50 uppercase tracking-wider">
+              {isLoading ? 'MEMPROSES...' : 'DAFTAR SEKARANG'}
             </button>
           </form>
 
-          {/* Login Link */}
-          <p className="mt-6 text-center text-sm text-foreground/60">
-            Sudah punya akun?{' '}
-            <Link
-              href="/login"
-              className="font-medium text-primary hover:text-primary/80 transition-colors"
-            >
-              Masuk di sini
-            </Link>
+          <p className="mt-8 text-center text-sm font-medium text-muted-foreground">
+            Sudah tergabung dalam pasukan?{' '}
+            <Link href="/login" className="font-bold text-primary hover:underline">Masuk Sistem</Link>
           </p>
         </div>
       </div>

@@ -1,3 +1,5 @@
+// app/admin/vehicles/page.tsx
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -36,7 +38,8 @@ export default function AdminVehiclesPage() {
             tahun: Number(v.tahun),
             plat_nomor: v.plat_nomor,
             created_at: new Date(v.created_at),
-            user_name: v.user_name || '',
+            // INI BAGIAN YANG DIPERBAIKI: Mengambil nama dari backend (owner_name)
+            user_name: v.owner_name || v.user_name || '', 
           }));
           setVehicles(mapped);
           return;

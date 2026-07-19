@@ -1,277 +1,89 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, Check, Trash2, CheckSquare } from 'lucide-react';
-import { toast } from 'sonner';
-import { DashboardLayout } from '@/components/dashboard-layout';
-
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: 'info' | 'success' | 'warning' | 'error';
-  read: boolean;
-  createdAt: Date;
-}
+import { apiClient } from '@/lib/api-client';
+import { Bell, AlertTriangle, CheckCircle, Clock, Wrench } from 'lucide-react';
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (!userData) {
-      router.push('/login');
-      return;
+    const fetchNotifs = async () => {
+      try {
+        const res = await apiClient.get('/notifications'); // Pastikan endpoint ini ada di backend-mu
+        if (res && res.success) {
+          setNotifications(res.data);
+        }
+      } catch (error) {
+        console.error('Gagal mengambil notifikasi', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchNotifs();
+  }, []);
+
+  // Helper untuk memberikan icon dan warna sesuai judul notifikasi
+  const getNotifStyle = (title: string) => {
+    if (title.includes('Kendala') || title.includes('Tertunda') || title.includes('Penyesuaian')) {
+      return { icon: <AlertTriangle className="w-5 h-5 text-orange-500" />, bg: 'bg-orange-500/10 border-orange-500/30' };
     }
-
-    // Load notifications from localStorage
-    const savedNotifications = localStorage.getItem('notifications');
-    if (savedNotifications) {
-      setNotifications(JSON.parse(savedNotifications).map((n: any) => ({
-        ...n,
-        createdAt: new Date(n.createdAt),
-      })));
-    } else {
-      // Initialize with sample notifications
-      const sampleNotifications: Notification[] = [
-        {
-          id: '1',
-          title: 'Antrian Siap',
-          message: 'Kendaraan Anda siap untuk service',
-          type: 'success',
-          read: false,
-          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        },
-        {
-          id: '2',
-          title: 'Service Selesai',
-          message: 'Service untuk Toyota Avanza sudah selesai',
-          type: 'success',
-          read: false,
-          createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
-        },
-        {
-          id: '3',
-          title: 'Pengingat Maintenance',
-          message: 'Saatnya melakukan maintenance berkala untuk kendaraan Anda',
-          type: 'warning',
-          read: true,
-          createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-        },
-        {
-          id: '4',
-          title: 'Update Sistem',
-          message: 'Sistem telah diperbarui dengan fitur-fitur baru',
-          type: 'info',
-          read: true,
-          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-        },
-        {
-          id: '5',
-          title: 'Antrian Dibatalkan',
-          message: 'Antrian Anda telah dibatalkan',
-          type: 'error',
-          read: true,
-          createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-        },
-      ];
-      setNotifications(sampleNotifications);
-      localStorage.setItem('notifications', JSON.stringify(sampleNotifications));
+    if (title.includes('Waktu')) {
+      return { icon: <Clock className="w-5 h-5 text-blue-500" />, bg: 'bg-blue-500/10 border-blue-500/30' };
     }
-  }, [router]);
-
-  const filteredNotifications = filter === 'unread' 
-    ? notifications.filter(n => !n.read)
-    : notifications;
-
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
-    localStorage.setItem('notifications', JSON.stringify(
-      notifications.map(n => n.id === id ? { ...n, read: true } : n)
-    ));
-    toast.success('Notifikasi ditandai sebagai dibaca');
-  };
-
-  const markAllAsRead = () => {
-    const updated = notifications.map(n => ({ ...n, read: true }));
-    setNotifications(updated);
-    localStorage.setItem('notifications', JSON.stringify(updated));
-    toast.success('Semua notifikasi ditandai sebagai dibaca');
-  };
-
-  const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-    toast.success('Notifikasi dihapus');
-  };
-
-  const deleteAllNotifications = () => {
-    setNotifications([]);
-    localStorage.setItem('notifications', JSON.stringify([]));
-    toast.success('Semua notifikasi dihapus');
-  };
-
-  const getTypeStyles = (type: string) => {
-    switch (type) {
-      case 'success':
-        return 'bg-success/10 border-success/30 text-success';
-      case 'warning':
-        return 'bg-warning/10 border-warning/30 text-warning';
-      case 'error':
-        return 'bg-danger/10 border-danger/30 text-danger';
-      default:
-        return 'bg-primary/10 border-primary/30 text-primary';
+    if (title.includes('Selesai')) {
+      return { icon: <CheckCircle className="w-5 h-5 text-green-500" />, bg: 'bg-green-500/10 border-green-500/30' };
     }
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'success':
-        return '✓';
-      case 'warning':
-        return '⚠';
-      case 'error':
-        return '✕';
-      default:
-        return 'ℹ';
+    if (title.includes('Paddock') || title.includes('Mulai')) {
+      return { icon: <Wrench className="w-5 h-5 text-primary" />, bg: 'bg-primary/10 border-primary/30' };
     }
+    return { icon: <Bell className="w-5 h-5 text-muted-foreground" />, bg: 'bg-muted border-border' };
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Notifikasi</h1>
-            <p className="mt-2 text-sm text-foreground/60">
-              {unreadCount} notifikasi belum dibaca
-            </p>
-          </div>
-          {unreadCount > 0 && (
-            <button
-              onClick={markAllAsRead}
-              className="btn-primary flex items-center gap-2"
-            >
-              <CheckSquare className="h-4 w-4" />
-              Tandai Semua Dibaca
-            </button>
-          )}
+    <div className="max-w-3xl mx-auto space-y-6">
+      <div className="flex items-center gap-3 mb-8">
+        <div className="p-3 bg-primary/10 rounded-xl">
+          <Bell className="w-6 h-6 text-primary" />
         </div>
-
-        {/* Filter Tabs */}
-        <div className="flex gap-2 border-b border-border">
-          <button
-            onClick={() => setFilter('all')}
-            className={`pb-4 px-2 text-sm font-medium transition-colors ${
-              filter === 'all'
-                ? 'border-b-2 border-primary text-primary'
-                : 'text-foreground/60 hover:text-foreground'
-            }`}
-          >
-            Semua ({notifications.length})
-          </button>
-          <button
-            onClick={() => setFilter('unread')}
-            className={`pb-4 px-2 text-sm font-medium transition-colors ${
-              filter === 'unread'
-                ? 'border-b-2 border-primary text-primary'
-                : 'text-foreground/60 hover:text-foreground'
-            }`}
-          >
-            Belum Dibaca ({unreadCount})
-          </button>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Pusat Notifikasi</h1>
+          <p className="text-muted-foreground text-sm">Pantau pembaruan status dan waktu estimasi motor Anda.</p>
         </div>
+      </div>
 
-        {/* Notifications List */}
-        <div className="space-y-3">
-          {filteredNotifications.length === 0 ? (
-            <div className="text-center py-12">
-              <Bell className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
-              <p className="text-foreground/60">
-                {filter === 'unread' ? 'Tidak ada notifikasi belum dibaca' : 'Tidak ada notifikasi'}
-              </p>
-            </div>
-          ) : (
-            filteredNotifications.map((notification) => (
-              <div
-                key={notification.id}
-                className={`card-base ${getTypeStyles(notification.type)} ${
-                  !notification.read ? 'border-l-4' : ''
-                }`}
-              >
-                <div className="flex items-start gap-4">
-                  {/* Icon */}
-                  <div className="mt-1 text-lg">{getTypeIcon(notification.type)}</div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-foreground">
-                          {notification.title}
-                        </h3>
-                        <p className="mt-1 text-sm text-foreground/80">
-                          {notification.message}
-                        </p>
-                        <p className="mt-2 text-xs text-foreground/50">
-                          {notification.createdAt.toLocaleDateString('id-ID', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </p>
-                      </div>
-
-                      {/* Status Badge */}
-                      {!notification.read && (
-                        <div className="flex-shrink-0 h-2 w-2 bg-primary rounded-full mt-2" />
-                      )}
-                    </div>
+      {isLoading ? (
+        <div className="flex justify-center py-10"><div className="w-8 h-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div></div>
+      ) : notifications.length === 0 ? (
+        <div className="text-center py-20 bg-card rounded-2xl border border-border">
+          <CheckCircle className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+          <h3 className="text-lg font-bold text-foreground">Belum ada notifikasi</h3>
+          <p className="text-muted-foreground text-sm">Semua pembaruan pengerjaan akan muncul di sini.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {notifications.map((notif) => {
+            const style = getNotifStyle(notif.title);
+            return (
+              <div key={notif.id} className={`p-5 rounded-2xl border ${style.bg} backdrop-blur-sm flex items-start gap-4 transition-all hover:scale-[1.01]`}>
+                <div className="mt-1">{style.icon}</div>
+                <div className="flex-1">
+                  <div className="flex justify-between items-start mb-1">
+                    <h3 className="font-bold text-foreground">{notif.title}</h3>
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {new Date(notif.created_at).toLocaleDateString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2 flex-shrink-0">
-                    {!notification.read && (
-                      <button
-                        onClick={() => markAsRead(notification.id)}
-                        className="p-2 hover:bg-muted rounded-lg transition-colors"
-                        title="Tandai sebagai dibaca"
-                      >
-                        <Check className="h-4 w-4" />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => deleteNotification(notification.id)}
-                      className="p-2 hover:bg-muted rounded-lg transition-colors"
-                      title="Hapus notifikasi"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <p className="text-sm text-foreground/80 leading-relaxed">{notif.message}</p>
                 </div>
               </div>
-            ))
-          )}
+            );
+          })}
         </div>
-
-        {/* Delete All Button */}
-        {notifications.length > 0 && (
-          <div className="pt-4 border-t border-border">
-            <button
-              onClick={deleteAllNotifications}
-              className="text-sm text-destructive hover:text-destructive/80 transition-colors"
-            >
-              Hapus Semua Notifikasi
-            </button>
-          </div>
-        )}
-      </div>
-    </DashboardLayout>
+      )}
+    </div>
   );
 }

@@ -6,99 +6,111 @@ import { authMiddleware, adminMiddleware } from '../middleware/auth';
 
 const router = Router();
 
-// GET /api/admin/stats
+// ==========================================
+// 1. ENDPOINT STATISTIK (DASHBOARD GRAFIK)
+// ==========================================
 router.get('/stats', authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
   try {
     const connection = await pool.getConnection();
 
-    const [[usersCount]] = (await connection.query('SELECT COUNT(*) as count FROM users')) as any;
-    const [[vehiclesCount]] = (await connection.query('SELECT COUNT(*) as count FROM vehicles')) as any;
-    const [[queuesTodayCount]] = (await connection.query('SELECT COUNT(*) as count FROM service_queues WHERE DATE(service_date) = CURDATE()')) as any;
-    const [[completedCount]] = (await connection.query('SELECT COUNT(*) as count FROM service_history WHERE completed_at IS NOT NULL')) as any;
-    const [[pendingCount]] = (await connection.query('SELECT COUNT(*) as count FROM service_queues WHERE status = \'Menunggu\'')) as any;
-    const [[processingCount]] = (await connection.query('SELECT COUNT(*) as count FROM service_queues WHERE status = \'Diproses\'')) as any;
+    const [[users]] = await connection.query('SELECT COUNT(*) as count FROM users WHERE role = "user"');
+    const [[vehicles]] = await connection.query('SELECT COUNT(*) as count FROM vehicles');
+    const [[queuesToday]] = await connection.query('SELECT COUNT(*) as count FROM service_queues WHERE DATE(created_at) = CURDATE()');
+    const [[completed]] = await connection.query('SELECT COUNT(*) as count FROM service_queues WHERE status = "Selesai"');
+    const [[pending]] = await connection.query('SELECT COUNT(*) as count FROM service_queues WHERE status = "Menunggu" OR status = "Kendala"');
+    const [[processing]] = await connection.query('SELECT COUNT(*) as count FROM service_queues WHERE status = "Diproses"');
 
-    // Monthly data for the last 6 months
-    const [queuesByMonthRows] = (await connection.query(
-      `SELECT DATE_FORMAT(service_date, '%b %Y') as month, COUNT(*) as queues
-       FROM service_queues
-       WHERE service_date >= DATE_SUB(CURDATE(), INTERVAL 5 MONTH)
-       GROUP BY YEAR(service_date), MONTH(service_date)
-       ORDER BY YEAR(service_date), MONTH(service_date)`
-    )) as any;
+    const [monthlyResult] = await connection.query(`
+      SELECT 
+        DATE_FORMAT(created_at, '%b %Y') as month,
+        COUNT(*) as queues,
+        SUM(CASE WHEN status = 'Selesai' THEN 1 ELSE 0 END) as completed
+      FROM service_queues
+      WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+      GROUP BY YEAR(created_at), MONTH(created_at), month
+      ORDER BY YEAR(created_at) ASC, MONTH(created_at) ASC
+    `);
 
-    const [completedByMonthRows] = (await connection.query(
-      `SELECT DATE_FORMAT(completed_at, '%b %Y') as month, COUNT(*) as completed
-       FROM service_history
-       WHERE completed_at >= DATE_SUB(CURDATE(), INTERVAL 5 MONTH)
-       GROUP BY YEAR(completed_at), MONTH(completed_at)
-       ORDER BY YEAR(completed_at), MONTH(completed_at)`
-    )) as any;
+    const [topVehicles] = await connection.query(`
+      SELECT 
+        v.merk, 
+        v.tipe, 
+        COUNT(sq.id) as total_service
+      FROM service_queues sq
+      JOIN vehicles v ON sq.vehicle_id = v.id
+      GROUP BY v.merk, v.tipe
+      ORDER BY total_service DESC
+      LIMIT 5
+    `);
 
     connection.release();
-
-    // Merge monthly data into an array of { month, queues, completed }
-    const monthsMap: Record<string, any> = {};
-    (queuesByMonthRows as any[]).forEach((r) => {
-      monthsMap[r.month] = { month: r.month, queues: r.queues || 0, completed: 0 };
-    });
-    (completedByMonthRows as any[]).forEach((r) => {
-      monthsMap[r.month] = monthsMap[r.month] || { month: r.month, queues: 0, completed: 0 };
-      monthsMap[r.month].completed = r.completed || 0;
-    });
-
-    const monthlyData = Object.values(monthsMap);
 
     res.json({
       success: true,
       data: {
-        totalUsers: (usersCount as any).count || 0,
-        totalVehicles: (vehiclesCount as any).count || 0,
-        totalQueuestoday: (queuesTodayCount as any).count || 0,
-        totalCompletedServices: (completedCount as any).count || 0,
-        totalPendingQueues: (pendingCount as any).count || 0,
-        totalProcessingQueues: (processingCount as any).count || 0,
-        monthlyData,
-      },
+        totalUsers: (users as any).count,
+        totalVehicles: (vehicles as any).count,
+        totalQueuestoday: (queuesToday as any).count,
+        totalCompletedServices: (completed as any).count,
+        totalPendingQueues: (pending as any).count,
+        totalProcessingQueues: (processing as any).count,
+        monthlyData: monthlyResult,
+        topVehicles: topVehicles
+      }
     });
+
   } catch (error) {
     console.error('Admin stats error:', error);
-    res.status(500).json({ success: false, message: 'Failed to retrieve stats' });
+    res.status(500).json({ success: false, message: 'Failed to load stats' });
   }
 });
 
-// GET /api/admin/users - list all users (admin)
+// ==========================================
+// 2. ENDPOINT DATA USERS 
+// ==========================================
 router.get('/users', authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
   try {
     const connection = await pool.getConnection();
     const [users] = await connection.query(
-      'SELECT id, name, email, role, address, created_at FROM users ORDER BY created_at DESC'
+      'SELECT id, name, email, role, phone, address, created_at FROM users ORDER BY created_at DESC'
     );
     connection.release();
+    
     res.json({ success: true, data: users });
   } catch (error) {
-    console.error('Admin users error:', error);
-    res.status(500).json({ success: false, message: 'Failed to retrieve users' });
+    console.error('Fetch users error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch users' });
   }
 });
 
-// GET /api/admin/vehicles - list all vehicles (admin)
+// ==========================================
+// 3. ENDPOINT DATA VEHICLES (YANG TADI HILANG)
+// ==========================================
 router.get('/vehicles', authMiddleware, adminMiddleware, async (req: Request, res: Response) => {
   try {
     const connection = await pool.getConnection();
-    const [vehicles] = await connection.query(
-      `SELECT v.id, v.user_id, v.merk, v.tipe, v.tahun, v.plat_nomor, v.created_at, u.name as user_name
-       FROM vehicles v
-       LEFT JOIN users u ON v.user_id = u.id
-       ORDER BY v.created_at DESC`
-    );
+    // Mengambil data kendaraan sekaligus JOIN dengan tabel users untuk mendapat nama pemilik
+    const [vehicles] = await connection.query(`
+      SELECT 
+        v.id, 
+        v.user_id, 
+        v.plat_nomor, 
+        v.merk, 
+        v.tipe, 
+        v.tahun, 
+        v.created_at, 
+        u.name as owner_name 
+      FROM vehicles v 
+      LEFT JOIN users u ON v.user_id = u.id 
+      ORDER BY v.created_at DESC
+    `);
     connection.release();
+    
     res.json({ success: true, data: vehicles });
   } catch (error) {
-    console.error('Admin vehicles error:', error);
-    res.status(500).json({ success: false, message: 'Failed to retrieve vehicles' });
+    console.error('Fetch admin vehicles error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch vehicles' });
   }
 });
 
 export default router;
-

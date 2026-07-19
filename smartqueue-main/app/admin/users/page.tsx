@@ -1,3 +1,5 @@
+// app/admin/users/page.tsx
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -41,9 +43,7 @@ export default function AdminUsersPage() {
           return;
         }
 
-        // Handle auth errors explicitly so the admin UI doesn't silently show empty data
         if (res && (res.code === 401 || res.code === 403)) {
-          // Clear session and redirect to login on auth failure
           if (typeof window !== 'undefined') {
             localStorage.removeItem('authToken');
             localStorage.removeItem('user');
@@ -73,44 +73,29 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-foreground">Data User</h1>
         <p className="mt-2 text-muted-foreground">Kelola daftar user sistem</p>
       </div>
 
-      {/* Search */}
       <SearchInput
-          placeholder="Cari user berdasarkan nama, email, atau peran..."
-          value={searchTerm}
-          onChange={setSearchTerm}
-          onClear={() => setSearchTerm('')}
-        />
+        placeholder="Cari user berdasarkan nama, email, atau peran..."
+        value={searchTerm}
+        onChange={setSearchTerm}
+        onClear={() => setSearchTerm('')}
+      />
 
-      {/* Users Table */}
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-muted/40">
-                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">
-                  Nama
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">
-                  Email
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">
-                  Role
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">
-                  Telepon
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">
-                  Alamat
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">
-                  Tanggal Bergabung
-                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Nama</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Email</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Role</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Telepon</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Alamat</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Tanggal Bergabung</th>
               </tr>
             </thead>
             <tbody>
@@ -122,26 +107,13 @@ export default function AdminUsersPage() {
                 </tr>
               ) : (
                 filteredUsers.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="border-b border-border hover:bg-muted/20 transition-colors"
-                  >
-                    <td className="px-6 py-4 text-sm font-medium text-foreground">
-                      {user.name}
-                    </td>
+                  <tr key={user.id} className="border-b border-border hover:bg-muted/20 transition-colors">
+                    <td className="px-6 py-4 text-sm font-medium text-foreground">{user.name}</td>
                     <td className="px-6 py-4 text-sm text-muted-foreground">{user.email}</td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground capitalize">
-                      {user.role}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">
-                      {user.phone || '-'}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground max-w-xs truncate">
-                      {user.address || '-'}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">
-                      {user.created_at.toLocaleDateString('id-ID')}
-                    </td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground capitalize">{user.role}</td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground">{user.phone || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground max-w-xs truncate">{user.address || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground">{user.created_at.toLocaleDateString('id-ID')}</td>
                   </tr>
                 ))
               )}
@@ -150,7 +122,6 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="rounded-lg border border-border bg-muted p-6">
         <p className="text-sm text-muted-foreground">
           Total User: <span className="font-bold text-foreground">{users.length}</span>

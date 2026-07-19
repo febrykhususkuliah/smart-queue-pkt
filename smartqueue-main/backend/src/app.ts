@@ -7,6 +7,7 @@ import queueRouter from './routes/queues';
 import serviceHistoryRouter from './routes/serviceHistory';
 import queueLogsRouter from './routes/queueLogs';
 import adminRouter from './routes/admin';
+import notificationsRouter from './routes/notifications'; // BARU: Import rute notifikasi
 import { errorHandler } from './middleware/auth';
 
 dotenv.config();
@@ -44,6 +45,7 @@ app.use('/api/queues', queueRouter);
 app.use('/api/service-history', serviceHistoryRouter);
 app.use('/api/queue-logs', queueLogsRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/notifications', notificationsRouter); // BARU: Daftarkan endpoint notifikasi
 
 app.use(errorHandler);
 

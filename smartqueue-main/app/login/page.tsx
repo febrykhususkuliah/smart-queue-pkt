@@ -10,9 +10,6 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { saveUserSession, getStoredSession } from '@/lib/auth';
-import { SessionUser } from '@/lib/types';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000';
 
 const loginSchema = z.object({
   email: z.string().email('Email tidak valid'),
@@ -66,7 +63,8 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      // ⚠️ DIKUNCI KE PORT 4000 AGAR TIDAK ERROR HTML/JSON
+      const response = await fetch('http://127.0.0.1:4000/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,8 +95,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12 transition-colors duration-300 relative overflow-hidden">
-      
+    <div 
+      className="flex min-h-screen items-center justify-center px-4 py-12 transition-colors duration-300 relative overflow-hidden"
+      style={{
+        backgroundImage: "url('/wallpaper-login.png')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed'
+      }}
+    >
       {/* Tombol Tema (Dark/Light Mode) */}
       <button
         onClick={toggleTheme}
@@ -120,28 +125,22 @@ export default function LoginPage() {
       {/* Kontainer Utama Form Login */}
       <div className="w-full max-w-md relative z-10">
         
-        {/* Bagian Header (Logo Bengkel PKT) */}
-        <div className="mb-8 flex flex-col items-center justify-center">
-          <div className="relative w-48 h-20 mb-4 transition-transform hover:scale-105 duration-300">
+        {/* Bagian Header Logo */}
+        <div className="mb-6 flex flex-col items-center justify-center">
+          <div className="relative w-80 h-32 sm:w-96 sm:h-36 mb-2 transition-transform hover:scale-105 duration-300">
             <Image 
               src="/logo-pkt.png" 
               alt="Bengkel PKT Logo" 
               fill
-              className="object-contain drop-shadow-xl" 
+              className="object-contain drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)]" 
               priority
             />
           </div>
-          <h1 className="text-3xl font-black text-foreground tracking-tight uppercase">
-            Bengkel <span className="text-primary">PKT</span>
-          </h1>
-          <p className="mt-2 text-sm font-bold text-muted-foreground tracking-widest uppercase">
-            Sistem Antrean Digital
-          </p>
         </div>
 
         {/* Kartu Form Login */}
-        <div className="relative rounded-2xl border border-border/50 bg-card/80 backdrop-blur-xl p-8 shadow-2xl transition-all duration-300 before:absolute before:inset-0 before:-z-10 before:rounded-2xl before:bg-gradient-to-b before:from-primary/10 before:to-transparent">
-          <h2 className="text-2xl font-bold text-foreground">Akses Panel</h2>
+        <div className="relative rounded-2xl border border-border/40 bg-card/95 backdrop-blur-xl p-8 shadow-[0_0_60px_rgba(0,0,0,0.7)] transition-all duration-300">
+          <h2 className="text-2xl font-bold text-foreground">Login PKT</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Masukkan kredensial Anda untuk masuk ke sistem
           </p>
@@ -154,7 +153,7 @@ export default function LoginPage() {
                 type="email"
                 placeholder="nama@email.com"
                 {...register('email')}
-                className="w-full rounded-lg border border-border bg-background/50 text-foreground px-4 py-3 placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all font-medium"
+                className="w-full rounded-lg border border-border bg-background/70 text-foreground px-4 py-3 placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all font-medium shadow-inner"
               />
               {errors.email && (
                 <p className="mt-1.5 text-sm font-medium text-destructive">{errors.email.message}</p>
@@ -169,7 +168,7 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   {...register('password')}
-                  className="w-full rounded-lg border border-border bg-background/50 text-foreground px-4 py-3 placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all pr-12 font-medium"
+                  className="w-full rounded-lg border border-border bg-background/70 text-foreground px-4 py-3 placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all pr-12 font-medium shadow-inner"
                 />
                 <button
                   type="button"
@@ -188,22 +187,16 @@ export default function LoginPage() {
               )}
             </div>
 
-            {/* Fitur Ingat Saya & Lupa Sandi */}
-            <div className="flex items-center justify-between pt-2">
+            {/* Fitur Ingat Saya */}
+            <div className="flex items-center pt-2">
               <label className="flex items-center gap-2 cursor-pointer group">
                 <input
                   type="checkbox"
                   {...register('rememberMe')}
                   className="h-4 w-4 rounded border-border bg-background text-primary focus:ring-primary transition-colors"
                 />
-                <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Ingat saya</span>
+                <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Ingat kredensial saya</span>
               </label>
-              <Link
-                href="/forgot-password"
-                className="text-sm font-bold text-primary hover:text-primary/80 hover:underline transition-all"
-              >
-                Lupa Sandi?
-              </Link>
             </div>
 
             {/* Tombol Masuk */}
